@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+        .obs-card { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 5px; }
+        input { padding: 8px; width: 300px; }
+        button { padding: 8px 15px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Multi-Site Aviation Weather</h1>
+    <p>Enter ICAO IDs separated by commas (e.g., <b>KSEA, KPDX, KSFO</b>):</p>
+    
+    <input type="text" id="icaoInput" placeholder="KSEA, KPDX">
+    <button onclick="getWeather()">Fetch Observations</button>
+
+    <div id="results" style="margin-top: 20px;"></div>
+
+    <script>
+        async function getWeather() {
+            const input = document.getElementById('icaoInput').value;
+            // Clean up whitespace: "KSEA, KPDX" -> "KSEA,KPDX"
+            const ids = input.replace(/\s+/g, ''); 
+            
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = 'Loading...';
+
+            try {
+                const response = await fetch(`http://localhost:3000/weather?ids=${ids}`);
+                const data = await response.json();
+
+                if (data.error) throw new Error(data.error);
+
+                // Clear results and display each observation
+                resultsDiv.innerHTML = '';
+                data.forEach(obs => {
+                    const card = document.createElement('div');
+                    card.className = 'obs-card';
+                    card.innerHTML = `
+                        <strong>${obs.icaoId}</strong> - ${obs.reportTime}<br>
+                        <code>${obs.rawOb}</code>
+                    `;
+                    resultsDiv.appendChild(card);
+                });
+            } catch (err) {
+                resultsDiv.innerHTML = `<span style="color:red">Error: ${err.message}</span>`;
+            }
+        }
+    </script>
+</body>
+</html>

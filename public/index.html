@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Observed New Mexico Max/Min Temperatures</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 850px;
+            margin: auto;
+            background: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        p {
+            text-align: center;
+            color: #555;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 80%;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            text-align: center;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+            font-weight: bold;
+            position: sticky;
+            top: 0; /* Sticks to the top of the viewport */
+            z-index: 10;
+        }
+        td:first-child, td:nth-child(1), .max24 {
+            text-align: left;
+            font-weight: bold;
+        }
+        tbody tr:nth-child(odd) {
+            background-color: #ecf0f1;
+        }
+        tbody td:first-child {
+            vertical-align: middle;
+            background-color: #fff;
+        }
+        /* Style for the temperature cells */
+        .temp-max { color: #e74c3c; }
+        .temp-min { color: #3498db; }
+
+        /* Style for the map */
+        #map { 
+            margin: auto;
+            padding: 25px 5px 5px 5px;
+            height: 700px;
+            width: 900px;
+        }
+
+        /* Style for the day buttons container  */
+        .day-button-container {
+            height: 50px;
+            width: 100%;
+            position: relative;
+            border: none;
+            padding: 2px 5px 15px 5px;
+        }
+
+        .center {
+            margin: 0;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            -ms-transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%);
+        }
+
+        /* Style for day button */
+        .day-button {
+            background-color: rgb(230, 230, 230);
+            border: 1px solid #5e5e5e;
+            padding: 6px 6px 6px 6px;
+            border-radius: 5px;
+            width: 95px;
+            margin-right: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+        }
+
+        .day-button:hover {
+            background-color: #b6e0fc; /* New background color on hover */
+            color: #000000; /* New text color on hover */
+            border: 1px solid #000;
+            font-size: 14px;
+        }
+
+        .is-toggled {
+            background-color: #3498db;
+            color: white;
+            border: 3px solid #000;
+            font-size: 14px;
+        }
+
+        #disclaimer {
+            font-size: 12px;
+        }
+    </style>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+     <!-- Make sure you put this AFTER Leaflet's CSS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+</head>
+<body>
+    <h1>Observed Daily High and Low Temperatures</h1>
+    
+    <div class="day-button-container">
+        <div class="center">
+            <button class="day-button" id="6daysAgo-button" role="button">6 Days Ago</button>
+            <button class="day-button" id="5daysAgo-button" role="button">5 Days Ago</button>
+            <button class="day-button" id="4daysAgo-button" role="button">4 Days Ago</button>
+            <button class="day-button" id="3daysAgo-button" role="button">3 Days Ago</button>
+            <button class="day-button" id="2daysAgo-button" role="button">2 Days Ago</button>
+            <button class="day-button" id="yday-button" role="button">Yesterday</button>
+            <button class="day-button is-toggled" id="today-button" role="button">Today</button>
+
+            <p class="js-currently-viewing">You are currently viewing preliminary Max / Min Temperature data from Today</p>
+        </div>
+    </div>
+    
+    <div id="map"></div>
+
+    <div class="container">
+        <p>24-Hour maximum and minimum temperatures (°F) for select New Mexico airports over the past 7 days.</p>
+        <p id='disclaimer'>* Note that data is downloaded from automated surface observation systems and may be prone to erros.</p>
+        
+        <table id="weather-table">
+            <thead>
+                </thead>
+            <tbody>
+                <tr><td colspan="9" style="text-align:center;">Loading weather data...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+    //////////
+    //////////
+    //////////
+    //////////  
+    //////////
+    //////////
+
+
+    let paragraphDayElement = document.querySelector('.js-currently-viewing');
+    console.log(`paragraphElement is: ${paragraphDayElement.textContent}`);    
+
+    let buttonDayValue = 6;
+    
+    const buttonToday = document.getElementById("today-button");
+    buttonToday.addEventListener("click", function() {
+        buttonDayValue = 6;
+        paragraphDayElement.textContent = 'You are currently viewing preliminary Max / Min Temperature data from Today.';
+        paragraphElement 
+        displayWeatherData();
+        toggleDays(buttonToday);
+        map.closePopup();
+    });
+    
+    const buttonYday = document.getElementById("yday-button");
+    buttonYday.addEventListener("click", function() {
+        buttonDayValue = 5;
+        paragraphDayElement.textContent = 'You are currently viewing preliminary Max / Min Temperature data from yesterday.';
+        displayWeatherData();
+        toggleDays(buttonYday);
+        map.closePopup();
+    });
+
+    const button2daysAgo = document.getElementById("2daysAgo-button");
+    button2daysAgo.addEventListener("click", function() {
+        buttonDayValue = 4;
+        paragraphDayElement.textContent = 'You are currently viewing preliminary Max / Min Temperature data from 2 days ago.';
+        displayWeatherData();
+        toggleDays(button2daysAgo);
+        map.closePopup();
+    });
+
+    const button3daysAgo = document.getElementById("3daysAgo-button");
+    button3daysAgo.addEventListener("click", function() {
+        buttonDayValue = 3;
+        paragraphDayElement.textContent = 'You are currently viewing preliminary Max / Min Temperature data from 3 days ago.';
+        displayWeatherData();
+        toggleDays(button3daysAgo);
+        map.closePopup();
+    });
+
+    const button4daysAgo = document.getElementById("4daysAgo-button");
+    button4daysAgo.addEventListener("click", function() {
+        buttonDayValue = 2;
+        paragraphDayElement.textContent = 'You are currently viewing preliminary Max / Min Temperature data from 4 days ago.';
+        displayWeatherData();
+        toggleDays(button4daysAgo);
+        map.closePopup();
+    });
+
+    const button5daysAgo = document.getElementById("5daysAgo-button");
+    button5daysAgo.addEventListener("click", function() {
+        buttonDayValue = 1;
+        paragraphDayElement.textContent = 'You are currently viewing preliminary Max / Min Temperature data from 5 days ago.';
+        displayWeatherData();
+        toggleDays(button5daysAgo);
+        map.closePopup();
+    });
+
+    const button6daysAgo = document.getElementById("6daysAgo-button");
+    button6daysAgo.addEventListener("click", function() {
+        buttonDayValue = 0;
+        paragraphDayElement.textContent = 'You are currently viewing preliminary Max / Min Temperature data from 6 days ago.';
+        displayWeatherData();
+        toggleDays(button6daysAgo);
+        map.closePopup();
+    });
+
+    function toggleDays(selector) {
+        const button = selector;
+        if (!button.classList.contains('is-toggled')) {
+            turnOffPreviousButton();
+            button.classList.add('is-toggled');
+        } else {
+            button.classList.remove('is-toggled');
+        }
+    }
+
+    // Before toggling a day-button ON, check if there's
+    // already a button that's turned ON and turn it OFF.
+    function turnOffPreviousButton() {
+        const previousButton = document.querySelector('.is-toggled');
+        if (previousButton) {
+            previousButton.classList.remove('is-toggled');
+        }
+    }
+    
+    // Define the airport sites, icao, and lat/lon
+    const sites = [
+        { name: 'Alamogordo', icao: 'KALM', lat: 32.8395, lon: -105.9944 },
+        { name: 'Albuquerque Sunport', icao: 'KABQ', lat: 35.0, lon: -106.7 },
+        { name: 'Albuquerque Double Eagle Airport', icao: 'KAEG', lat: 35.153018, lon: -106.790702 },
+        { name: 'Angel Fire Airport', icao: 'KAXX', lat: 36.4212, lon: -105.2894 },
+        { name: 'Artesia Airport', icao: 'KATS', lat: 32.8525, lon: -104.4664 },
+        { name: 'Belen Airport', icao: 'KBRG', lat: 34.6441, lon: -106.8346 },
+        { name: 'Cannon Air Force Base', icao: 'KCVS', lat: 34.38174, lon: -103.327549 },
+        { name: 'Carlsbad Airport', icao: 'KCNM', lat: 32.3315, lon: -104.264 },
+        { name: 'Clayton Airport', icao: 'KCAO', lat: 36.4474, lon: -103.1523 },
+        { name: 'Clines Corners', icao: 'KCQC', lat: 35.00311, lon: -105.66298 },
+        { name: 'Clovis Airport', icao: 'KCVN', lat: 34.4266, lon: -103.079 },
+        { name: 'Deming Airport', icao: 'KDMN', lat: 32.2638, lon: -107.7208 },             
+        { name: 'Farmington Airport', icao: 'KFMN', lat: 36.741299, lon: -108.230318 },
+        { name: 'Gallup Airport', icao: 'KGUP', lat: 35.515507, lon: -108.780094 },
+        { name: 'Grants-Milan Airport', icao: 'KGNT', lat: 35.1669, lon: -107.9012 },
+        { name: 'Hobbs Airport', icao: 'KHOB', lat: 32.6892, lon: -1032146 },
+        { name: 'Las Cruces', icao: 'KLRU', lat: 32.2904, lon: -106.9208 },
+        { name: 'Las Vegas Airport', icao: 'KLVS', lat: 35.654944, lon: -105.142528 },
+        { name: 'Lordsburg', icao: 'KLSB', lat: 32.3358, lon: -108.6932 },
+        { name: 'Los Alamos Airport', icao: 'KLAM', lat: 35.881, lon: -106.2764 },
+        { name: 'Melrose Range', icao: 'K4MR', lat: 34.3026, lon: -103.804 },
+        { name: 'Moriarty Airport', icao: 'K0E0', lat: 34.9841, lon: -106.0087 },
+        { name: 'Questa Airport', icao: 'KN24', lat: 36.79491, lon: -105.5987 },
+        { name: 'Raton Airport', icao: 'KRTN', lat: 36.7404, lon: -104.5054 },
+        { name: 'Roswell Airport', icao: 'KROW', lat: 33.37, lon: -104.53 },
+        { name: 'Santa Fe Airport', icao: 'KSAF', lat: 35.69, lon: -105.96 },
+        { name: 'Santa Rosa Airport', icao: 'KSXU', lat: 34.93244, lon: -104.6386 },
+        { name: 'Santa Teresa Airport', icao: 'KDNA', lat: 31.8796, lon: -106.6977 },
+        { name: 'Sierra Blanca Airport', icao: 'KSRR', lat: 33.4633, lon: -105.5323 },
+        { name: 'Silver City', icao: 'KSVC', lat: 32.6321, lon: -108.1543 },
+        { name: 'Socorro Airport', icao: 'KONM', lat: 34.02502, lon: -106.9011 },
+        //{ name: 'Taos Airport', icao: 'KSKX', lat: 36.45, lon: -105.67 },              //KSKX omited during long term AWOS outage
+        { name: 'Truth or Consequences', icao: 'KTCS', lat: 33.2375, lon: -107.2717 },
+        { name: 'Tucumcari Airport', icao: 'KTCC', lat: 35.184058, lon: -103.600857 },
+        { name: 'Zuni Airfield', icao: 'KXNI', lat: 35.0595, lon: -108.9384 }
+    ];
+    
+    const timeZone = 'America/Denver'; // This is the IANA time zone for New Mexico (Mountain Time)
+    let daysData = [];
+    /**
+     * Converts a temperature from Celsius to Fahrenheit.
+     * @param {number|null} celsius The temperature in Celsius.
+     * @returns {string} The temperature in Fahrenheit, rounded, or 'Missing'.
+     */
+    function celsiusToFahrenheit(celsius) {
+        if (celsius === null || isNaN(celsius)) return 'Missing';
+        return `${Math.round((celsius * 9 / 5) + 32)}° F`;
+    }
+
+    /**
+     * Generates an array of Date objects for the past 7 days, ending with today.
+     * @returns {Date[]} An array of the last 7 dates.
+     */
+    function getPastSevenDays() {
+        const dates = [];
+        const today = new Date();
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(today.getDate() - i);
+            dates.push(date);
+        }
+        return dates;
+    }
+
+    let thermIcon = new L.icon({ iconUrl: 'thermometer.png',   iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -15] });
+
+    /**
+     * Fetches, processes, and displays the weather data in the HTML table.
+     */
+    
+    async function displayWeatherData() {
+        const tableHead = document.querySelector('#weather-table thead');
+        const tableBody = document.querySelector('#weather-table tbody');
+
+        try {
+            // --- 1. Generate Date Headers ---
+            const dateHeaders = getPastSevenDays();
+            const headerRow = document.createElement('tr');
+            headerRow.innerHTML = '<th>Site</th><th>Observed<br>Temperatures</th>';
+            dateHeaders.forEach(date => {
+                const th = document.createElement('th');
+                // Format date as "Mon, 9/15" for the header
+                th.textContent = date.toLocaleDateString('en-US', { timeZone, weekday: 'short', month: 'numeric', day: 'numeric' });
+                headerRow.appendChild(th);
+            });
+            tableHead.innerHTML = '';
+            tableHead.appendChild(headerRow);
+            
+            // Create a list of date keys in YYYY-MM-DD format for easy data lookup
+            const dateKeys = dateHeaders.map(d => d.toLocaleDateString('en-CA', { timeZone }));
+            //console.log(`dateKeys[0] is: ${dateKeys}`);
+            // Fetch Data for All Sites in Parallel and create an array---
+            const promises = sites.map(site => {
+                const url = `http://localhost:3000/weather?ids=${site.icao}`;
+                //const url = `/api/aviationweather-api?ids=${site.icao}`;
+                return fetch(url).then(response => {
+                    if (!response.ok) throw new Error(`HTTP error for ${site.icao}: ${response.status}`);
+                    //  Get the response as raw text instead of calling .json() directly.
+                    return response.text();
+                })
+                .then(text => {
+                    //  Check if the text is empty.
+                    if (text.length === 0) {
+                        // If it is, log it and return an empty array to be consistent.
+                        console.log(`No data for ${site.icao}, received empty response.`);
+                        return []; // This prevents the JSON parse error.
+                    }
+                    
+                    //  If text exists, it's safe to parse.
+                    try {
+                        return JSON.parse(text);
+                    } catch (parseError) {
+                        console.error(`Failed to parse JSON for ${site.icao}:`, text);
+                        throw new Error(`JSON parse error for ${site.icao}: ${parseError.message}`);
+                    }
+                });
+            });
+            //. Wait for all promises to resolve ---
+            let results = await Promise.all(promises);
+            
+            //  Log the results ---
+            console.log("All weather data fetched successfully:", results);
+            
+            // You can also "flatten" the array of arrays to get one big list of METARs
+            const allMetars = results.flat();
+            console.log(`Total individual METARs found across all sites: ${allMetars.length}`);
+            tableBody.innerHTML = ''; // Clear "Loading..." message
+
+            // --- 3. Process and Display Data for Each Site ---
+            sites.forEach((site, index) => {
+                const observations = results[index];
+                const dailyData = {};
+                //console.log(`site is: ${site.icao}`);
+                dateKeys.forEach(key => {
+                    dailyData[key] = { max: -Infinity, min: Infinity };
+                });
+                
+                // Process each observation, grouping it into the correct local day
+                observations.forEach(obs => {
+                    // Ensure max/min temperature data exists and are numbers
+                    if (obs.maxT24 && typeof obs.maxT24 === 'number') {
+                        const obsDate = new Date(obs.reportTime);
+                        const shiftedObsDate = new Date(obsDate - 86400000);        //since the first obs with maxT24 are 1 day old, we subtract 1 day
+                        console.log(`shiftedObsDate is: ${shiftedObsDate.toLocaleDateString('en-CA',  timeZone )}`);
+                        const localDateKey = shiftedObsDate.toLocaleDateString('en-CA', { timeZone });
+                                                    
+                        if (dailyData[localDateKey]) {
+                            dailyData[localDateKey].max = Math.max(dailyData[localDateKey].max, obs.maxT24);
+                            console.log(`maxT24 at ${site.icao} for ${localDateKey} is: ${celsiusToFahrenheit(dailyData[localDateKey].max)}`);
+                        }
+                    
+                    } else if (obs.maxT && typeof obs.maxT === 'number') {         
+                        const obsDate = new Date(obs.reportTime);
+                        const localDateKey = obsDate.toLocaleDateString('en-CA', { timeZone });
+                        
+                        if (dailyData[localDateKey]) {
+                            dailyData[localDateKey].max = Math.max(dailyData[localDateKey].max, obs.maxT);
+                        }
+                    
+                    } else if (typeof obs.temp === 'number') {
+                        const obsDate = new Date(obs.reportTime);
+                        const localDateKey = obsDate.toLocaleDateString('en-CA', { timeZone });
+                        
+                        if (dailyData[localDateKey]) {
+                            dailyData[localDateKey].max = Math.max(dailyData[localDateKey].max, obs.temp);
+                        }
+                    }
+                    
+                    if (obs.minT24 && typeof obs.minT24 === 'number') {
+                        const obsDate = new Date(obs.reportTime);
+                        const shiftedObsDate = new Date(obsDate - 86400000);        //since the first obs with minT24 are 1 day old, we subtract 1 day
+                        const localDateKey = shiftedObsDate.toLocaleDateString('en-CA', { timeZone });
+                                                    
+                        if (dailyData[localDateKey]) {
+                            dailyData[localDateKey].min = Math.min(dailyData[localDateKey].min, obs.minT24);
+                            //console.log(`For ${site.icao} on ${obsDate}, there was a 24-hrly obs.minT24 field. RawOb is: ${obs.rawOb} and MinT is: ${celsiusToFahrenheit(dailyData[localDateKey].min)}`);
+                        }
+
+                    } else if (obs.minT) {         
+                        const obsDate = new Date(obs.reportTime);
+                        const localDateKey = obsDate.toLocaleDateString('en-CA', { timeZone });
+                        
+                        if (dailyData[localDateKey]) {
+                            dailyData[localDateKey].min = Math.min(dailyData[localDateKey].min, obs.minT);
+                            //console.log(`For ${site.icao} on ${obsDate}, there was a 6-hrly obs.minT field. RawOb is: ${obs.rawOb} and MinT is: ${celsiusToFahrenheit(dailyData[localDateKey].min)}`);
+                        }
+                        
+                    // If 6-hourly max/min do not exist find hourly temperature data exists and check if it is a number
+                    } else if (typeof obs.temp === 'number') {
+                        const obsDate = new Date(obs.reportTime);
+                        const localDateKey = obsDate.toLocaleDateString('en-CA', { timeZone });
+                        
+                        if (dailyData[localDateKey]) {
+                            dailyData[localDateKey].min = Math.min(dailyData[localDateKey].min, obs.temp);
+                            //console.log(`For ${site.icao} on ${obsDate}, there was neither a 24-hr or 6-hr field so minT was calculated via hourly obs. RawOb is: ${obs.rawOb} and MinT is: ${celsiusToFahrenheit(dailyData[localDateKey].min)}`);
+                        }
+                    }
+                    
+                });
+
+                // --- 4. Create and Append Table Rows ---
+                const maxRow = document.createElement('tr');
+                const minRow = document.createElement('tr');
+
+                // The first cell spans two rows to show the site name
+                maxRow.innerHTML = `<td rowspan="2">${site.name}<br>(${site.icao})</td><td class="max24">24-Hour Max</td>`;
+                minRow.innerHTML = `<td>24-Hour Min</td>`;
+                
+                // Populate the temperature data for each of the 7 days
+                dateKeys.forEach(key => {
+                    day = dailyData[key];
+                    //console.log(`day.max for ${sites.icao} is: ` + day.max);
+                    
+                    // If a value is still at its initial state, it means no data was found for that day
+                    const maxTempC = day.max === -Infinity ? null : day.max;
+                    const minTempC = day.min === Infinity ? null : day.min;
+
+                    maxRow.innerHTML += `<td class="${site.icao}-temp-max-${key} temp-max">${celsiusToFahrenheit(maxTempC)}</td>`;
+                    minRow.innerHTML += `<td class="temp-min">${celsiusToFahrenheit(minTempC)}</td>`;
+                    daysData.push({
+                        site: site.name,
+                        maxT: celsiusToFahrenheit(maxTempC),
+                        minT: celsiusToFahrenheit(minTempC)
+                    })
+                    
+                    
+                });
+                
+                tableBody.appendChild(maxRow);
+                tableBody.appendChild(minRow);
+                
+            });
+            
+            //console.log(`daysData[6].maxT is ${daysData[6].maxT}`);
+            for (let j = sites.length - 1; j >= 0; j--) {
+                let marker = new L.marker([sites[j].lat, sites[j].lon], { icon: thermIcon, title: 'Preliminary High / Low Temperatures', draggable:false}).addTo(map);
+                //console.log(`j is: ${j} and j * 7 + buttonDayValue = ${j * 7 + buttonDayValue} and sites[j].name is: ${sites[j].name}`);
+                marker.bindPopup(`<b>${sites[j].name}</b><br><font color="red">High: <b>${daysData[j * 7 + buttonDayValue].maxT}</b></font><br><font color="blue">Low: <b>${daysData[j * 7 + buttonDayValue].minT}</b></font>`);
+                
+            }
+            map.panTo([34.2, -106.0]);
+            
+        
+        } catch (error) {
+            console.error('Failed to fetch weather data:', error);
+            tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; color: red;">Failed to load weather data. Please try again later.</td></tr>`;
+        }
+    }
+
+    // Run the main function when the page content has loaded
+    document.addEventListener('DOMContentLoaded', displayWeatherData);
+    const map = L.map('map').setView([34.2, -106.0], 7);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        minZoom: 7,
+        maxZoom: 19,
+        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    
+    </script>
+
+</body>
+</html>
