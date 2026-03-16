@@ -353,7 +353,7 @@
             //console.log(`dateKeys[0] is: ${dateKeys}`);
             // Fetch Data for All Sites in Parallel and create an array---
             const promises = sites.map(site => {
-                const url = `http://localhost:3000/weather?ids=${site.icao}`;
+                const url = `/weather?ids=${site.icao}`;
                 //const url = `/api/aviationweather-api?ids=${site.icao}`;
                 return fetch(url).then(response => {
                     if (!response.ok) throw new Error(`HTTP error for ${site.icao}: ${response.status}`);
